@@ -13,6 +13,9 @@
 #include <openssl/ssl.h>    
 #include <openssl/err.h>    
 
+
+char dest_host[20];
+int dest_port;
 #define SERVER_STRING "Server: jdbhttpd/0.1.0\r\n"
 #define ISspace(x) isspace((int)(x))    
 #define MAXBUF 1024    
@@ -22,9 +25,7 @@ int InitSocket(u_short*);
 void Return501(SSL*);
 void Return400(SSL*);
 void Return404(SSL*);
-void headers(SSL*, const char*);
 void cat(SSL*, FILE*);
-//void serve_file(SSL*, const char*, int);
 void accept_request(SSL *);
 int Strcmp(const char *, const char *);
 int char2num(const char *);
@@ -39,6 +40,17 @@ int char2num(const char *buf)
     while(buf[i] != '\n'){
         sum *= 10;
         sum += buf[i]-'0';
+        i++;
+    }
+    return sum;
+}
+
+int char2num2(const char *buf)
+{
+    int i = 0, sum = 0;
+    while(buf[i] != '\0'){
+        sum *= 10;
+        sum += buf[i] - '0';
         i++;
     }
     return sum;
@@ -122,8 +134,6 @@ printf("method =====> %s\n", method);
 		return ;
 	}
 	
-//	if(strcasecmp(method, "POST") == 0)
-//		cgi = 0;
 
 	i = 0;
     while (ISspace(buf[j]) && (j < numchars))
@@ -152,7 +162,6 @@ printf("method =====> %s\n", method);
 	if(stat(path, &st) == -1){
 		while((numchars > 0) && strcmp("\n", buf))
 			numchars = GetLine(client, buf, sizeof(buf));
-//  DEBUG printf("404\n");
 		Return404(client);
 	}
 	else
@@ -165,7 +174,7 @@ printf("method =====> %s\n", method);
 			(st.st_mode & S_IXOTH)  )
 			cgi = 0;
     */
-#if 1
+#if 0
 while(1){
         int iii  = GetLine(client, buf, 1024);
         if(Strcmp(buf,"Content-Length:")){
@@ -176,47 +185,17 @@ while(1){
         if(iii == 1) break;
 }
 #endif
-		//serve_file(client, path, contentLength);
 		Transmit(client, contentLength);
 	}
 	
 	close(clientSocket);
 }
-/*
-void serve_file(SSL* client, const char *filename, int contentLength)
-{
-    FILE *resource = NULL;
-    int numchars = 1;
-    char buf[1024];
 
-    buf[0] = 'A'; buf[1] = '\0';
-//    while ((numchars > 0) && strcmp("\n", buf))  // read & discard headers 
-        //numchars = GetLine(client, buf, sizeof(buf));
-
-		SSL_read(client, buf, contentLength);
-        buf[contentLength] = '\0';
-printf("read overr\n");
-//    resource = fopen(filename, "r");
-    if (resource != NULL)
-        Return404(client);
-    else
-    {
-        headers(client, filename);
-//        cat(client, resource);
-//        SSL_write(client , buf, strlen(buf));
-        Transmit(contentLength, buf); 
-    }
- //   fclose(resource);
-}
-
-*/
 int Transmit(SSL *client ,int contentLength)
 {
 /* DEBUG printf("Transmit start =========\n"); */
     int fd = 0;
     struct sockaddr_in dest;
-    int port = 16500; 
-    char * dest_host = "172.20.11.36";
     char buf[1024];
 
     SSL_read(client, buf, contentLength);
@@ -225,7 +204,7 @@ int Transmit(SSL *client ,int contentLength)
     fd = socket( AF_INET, SOCK_STREAM, 0 );
     bzero(&dest, sizeof(dest));
     dest.sin_family = AF_INET;
-    dest.sin_port = htons(port);
+    dest.sin_port = htons(dest_port);
     if (inet_aton(dest_host, (struct in_addr *) &dest.sin_addr.s_addr) == 0) {
         perror("error 222");
         exit(errno);
@@ -261,22 +240,6 @@ int SendHeaders(int client, int contentLength)
     write(client, buf, strlen(buf));
     return 1;
 }
-
-void headers(SSL *ssl, const char *filename)
-{
-    char buf[256];
-    (void)filename;  /* could use filename to determine file type */
-
-    strcpy(buf, "HTTP/1.0 200 OK\r\n");
-    SSL_write(ssl, buf, strlen(buf));    
-    strcpy(buf, SERVER_STRING);
-    SSL_write(ssl, buf, strlen(buf));    
-    sprintf(buf, "Content-Type: text/html\r\n");
-    SSL_write(ssl, buf, strlen(buf));    
-    strcpy(buf, "\r\n");
-    SSL_write(ssl, buf, strlen(buf));    
-}
-
 
 void cat(SSL *ssl, FILE *resource)
 {
@@ -386,13 +349,20 @@ int main(int argc, char **argv)
     int sockfd = -1;
 	int new_fd = -1;    
     socklen_t len;    
-    struct sockaddr_in my_addr, their_addr;    
-    u_short myport;    
+    struct sockaddr_in their_addr;    
+    u_short myport = 9999;    
     SSL_CTX *ctx;    
-        
-    myport = 9999;    
-    //lisnum = 2;    
-        
+
+    if(argc < 4){
+        strcpy(dest_host, "172.20.11.36");
+        dest_port = 16500;
+    }    
+    else {
+        printf("%s\n", argv[3]);
+        strcpy(dest_host, argv[3]);
+        dest_port = char2num2(argv[4]);        
+    }
+    
     SSL_library_init();    
     OpenSSL_add_all_algorithms();    
     SSL_load_error_strings();    
