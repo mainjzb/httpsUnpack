@@ -37,7 +37,7 @@ int SendHeaders(int , int );
 int char2num(const char *buf)
 {
     int i = 0, sum = 0;
-    while(buf[i] != '\n'){
+    while(buf[i] != '\0' && buf[i] != '\n'){
         sum *= 10;
         sum += buf[i]-'0';
         i++;
@@ -45,16 +45,6 @@ int char2num(const char *buf)
     return sum;
 }
 
-int char2num2(const char *buf)
-{
-    int i = 0, sum = 0;
-    while(buf[i] != '\0'){
-        sum *= 10;
-        sum += buf[i] - '0';
-        i++;
-    }
-    return sum;
-}
 
 int Strcmp(const char * buf, const char * arr)
 {
@@ -174,22 +164,23 @@ printf("method =====> %s\n", method);
 			(st.st_mode & S_IXOTH)  )
 			cgi = 0;
     */
-#if 0
-while(1){
-        int iii  = GetLine(client, buf, 1024);
-        if(Strcmp(buf,"Content-Length:")){
-            contentLength = char2num(buf+16);
-            printf("Contentlen:%d/n",contentLength);
-        }
-        printf("iii:%d -- %s",iii,buf);
-        if(iii == 1) break;
-}
-#endif
+
+		while(1){
+			int iii  = GetLine(client, buf, 1024);
+    	    if(Strcmp(buf,"Content-Length:")){
+        	    contentLength = char2num(buf+16);
+				//printf("Contentlen:%d/n",contentLength);
+			}
+		//	printf("iii:%d -- %s",iii,buf);
+        	if(iii == 1) break;
+		}
 		Transmit(client, contentLength);
 	}
 	
 	close(clientSocket);
 }
+
+
 
 int Transmit(SSL *client ,int contentLength)
 {
@@ -255,7 +246,6 @@ void cat(SSL *ssl, FILE *resource)
 
 void Return404(SSL *ssl)
 {
-	
     char buf[256];
     sprintf(buf, "HTTP/1.0 404 NOT FOUNT\r\n");
     SSL_write(ssl, buf, strlen(buf));    
@@ -360,7 +350,7 @@ int main(int argc, char **argv)
     else {
         printf("%s\n", argv[3]);
         strcpy(dest_host, argv[3]);
-        dest_port = char2num2(argv[4]);        
+        dest_port = char2num(argv[4]);        
     }
     
     SSL_library_init();    
